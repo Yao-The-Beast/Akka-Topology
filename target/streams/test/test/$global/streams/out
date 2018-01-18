@@ -1,0 +1,2 @@
+[0m[[0mdebug[0m] [0mRunning TaskDef(sample.cluster.allreduce.buffer.ScatteredDataBufferSpec, org.scalatest.tools.Framework$$anon$1@1054e756, false, [SuiteSelector])[0m
+[0m[[0mdebug[0m] [0mRunning TaskDef(AllReduceSpec, org.scalatest.tools.Framework$$anon$1@1054e756, false, [SuiteSelector])[0m

@@ -1,0 +1,9 @@
+[0m[[0minfo[0m] [0m[32mScatteredDataBufferSpec:[0m[0m
+[0m[[0minfo[0m] [0m[32mScattered buffer behavior[0m[0m
+[0m[[0minfo[0m] [0m[32m- should initialize buffers[0m[0m
+[0m[[0minfo[0m] [0m[32m- should throw exception when data to store at the end exceeds expected size[0m[0m
+[0m[[0minfo[0m] [0m[32m- should reach reducing threshold[0m[0m
+[0m[[0minfo[0m] [0m[32m- should reduce values with correct count[0m[0m
+[0m[[0minfo[0m] [0m[32mScattered buffer summation reduction[0m[0m
+[0m[[0minfo[0m] [0m[32m- should sum from all peers at one row[0m[0m
+[0m[[0minfo[0m] [0m[32m- should not be affected by other rows[0m[0m
