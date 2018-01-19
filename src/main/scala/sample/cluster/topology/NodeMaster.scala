@@ -14,18 +14,22 @@ class NodeMaster() extends Actor with akka.actor.ActorLogging{
 
   //used to store all the dimension masters created by the nodeMaster
   //dimension, dimensionMasterRef
-  var dimensionMastersList = ArrayBuffer[(Int, ActorRef)]()
+  var dimensionMastersList = Map[Int, ActorRef]()
   //used to store all the workers created by the NodeMaster
   //dimension, workerRef
-  var workersList = ArrayBuffer[(Int, ActorRef)]()
+  var workersList = Map[Int, ActorRef]()
 
   var id = -1
+
+  var totalChildren = 3 //need to be fixed!!!!
+  var numWorkersPerNode = 2 //need to be fixed!!!!
+  var currentOnlineChildren = 0
 
   def receive = {
 
     case msg : GreetingFromGridMaster => 
-      println(s"----NodeMaster: Receive greeting from GridMaster. My id is ${msg.idx}")
-      id = msg.idx
+      println(s"----NodeMaster: Receive greeting from GridMaster. My id is ${msg.id}")
+      id = msg.id
 
 
     case msg : DimensionMasterAssignment =>
@@ -45,16 +49,18 @@ class NodeMaster() extends Actor with akka.actor.ActorLogging{
       val dimensionMaster = context.actorOf(
         Props(
           classOf[DimensionMaster],
-          msg.dim
+          msg.dim,
+          numWorkersPerNode
         )
-        , "DimensionMaster")
-      dimensionMastersList += ((msg.dim, dimensionMaster))
+        , s"DimensionMaster_${msg.dim}")
+      context.watch(dimensionMaster)
 
-      //debug
-      //dimensionMastersList.last._2 ! SanityCheck("Hello from NodeMaster")
-
-      //Send its slaves references to the DimensionMaster
-      dimensionMastersList.last._2 ! DimensionMasterInitInfo(msg.dim, msg.slaves)
+      dimensionMastersList = dimensionMastersList.updated(msg.dim, dimensionMaster)
+      
+      //relay the msg to the DimensionMaster for it to lookup
+      dimensionMastersList(msg.dim) ! SlavesNodeMasters(msg.dim, msg.slaves)
+      //wait for DimensionMaster to echoBack
+      dimensionMastersList(msg.dim) ! Echo()
 
 
     case msg : WorkerCreation =>
@@ -67,24 +73,45 @@ class NodeMaster() extends Actor with akka.actor.ActorLogging{
       //Yet, the info is actually encoded within the worker's name as children actors cannot have identical names
       val worker = context.actorOf(
         Props(
-          classOf[Worker]
+          classOf[Worker],
+          s"Worker_${msg.dim}"
         )
-        , s"Worker${msg.dim}")
-      workersList += ((msg.dim, worker))
-      //debug
-      workersList.last._2 ! SanityCheck("Hello from NodeMaster")
+        , s"Worker_${msg.dim}")
+      context.watch(worker)
+
+      workersList = workersList.updated(msg.dim, worker)
+      //Wait for the worker to echoBack
+      workersList(msg.dim) ! Echo()
+      workersList(msg.dim) ! SanityCheck("Hello from NodeMaster")
 
 
-    case Terminated(a) =>
-      log.info(s"----hahahaahah")
+    case msg : RequestWorkerAddress =>
+      //debug use
+      println(s"----NodeMaster: Receive Worker Creation from DM ${sender} who is responsible for dim ${msg.dim}")
+      sender ! RetrieveWorkerAddress(workersList(msg.dim))
+
+
+    case msg : EchoBack =>
+      currentOnlineChildren += 1
+      if (currentOnlineChildren == totalChildren){
+        println(s"----NodeMaster: All ${totalChildren} children are online")
+        //Let all the dimension masters start finding their workers
+        for ((idx, dimensionMaster) <- dimensionMastersList){
+          dimensionMaster ! FindWorkers()
+        }
+      }
+
+
+    case Terminated(child) =>
+      log.info(s"----NodeMaster: Child Actor ${child} is terminated")
   }
 
-  private def createDimensionMasterRequest(dim : Int, slaves : Map[Int, ActorRef]) : Unit = {
+  private def createDimensionMasterRequest(dim : Int, slaves : ArrayBuffer[ActorRef]) : Unit = {
     self ! DimensionMasterCreation(dim, slaves)
   }
 
-  private def createWorkersRequest(dim : Int, slaves : Map[Int, ActorRef]) : Unit = {
-    for ((idx, thisSlave) <- slaves){
+  private def createWorkersRequest(dim : Int, slaves : ArrayBuffer[ActorRef]) : Unit = {
+    for (thisSlave <- slaves){
        thisSlave ! WorkerCreation(dim)
     }
   }

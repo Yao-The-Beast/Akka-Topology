@@ -19,7 +19,7 @@ class GridMaster(
   val cluster = Cluster(context.system)
   val registrationTimeout: FiniteDuration = 5.seconds
   //grid and master info
-  //Dimension Number, Master Idx, [workers Indices]
+  //Dimension Number, NodeMaster Idx, [workers Indices]
   var dimMastersInfo = ArrayBuffer[(Int, Int, ArrayBuffer[Int])]()
   
   override def preStart(): Unit = cluster.subscribe(self, classOf[MemberUp])
@@ -53,7 +53,8 @@ class GridMaster(
       }
   }
 
-  private def register(member: Member): Unit =
+  private def register(member: Member): Unit = {
+    //member.getRoles().foreach(p => println(s"----p"))
     if (member.hasRole("NodeMaster")) {
       // awaiting here to prevent concurrent futures (from another message) trying to add to worker set at the same time
       val nodeMasterRef: ActorRef = Await.result(context.actorSelection(RootActorPath(member.address) / "user" / "NodeMaster").resolveOne(registrationTimeout), registrationTimeout + 1.second)
@@ -64,16 +65,17 @@ class GridMaster(
       //send a greeting msg to node master
       nodeMasterRef ! GreetingFromGridMaster(newId)
     }
+  }
 
   private def initNodeMasters() : Unit = {
-    for ((dim, masterIdx, workersIdx) <- dimMastersInfo){
-        var workers = Map[Int, ActorRef]()
-        for (idx <- workersIdx){
-          workers = workers.updated(idx, nodeMasters(idx))
-        }
-        nodeMasters(masterIdx) ! DimensionMasterAssignment(dim, workers)
+    for ((dim, nodeMasterIdx, slavesNodeMasterIdx) <- dimMastersInfo){
+      var slavesMasterNodes = ArrayBuffer[ActorRef]()
+      for (idx <- slavesNodeMasterIdx){
+        slavesMasterNodes += nodeMasters(idx)
       }
+      nodeMasters(nodeMasterIdx) ! DimensionMasterAssignment(dim, slavesMasterNodes)
     }
+  }
 
   //Pre Generate a grid mapping
   //Assume our grid is 2 * 2
