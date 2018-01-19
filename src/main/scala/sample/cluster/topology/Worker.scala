@@ -23,6 +23,6 @@ class Worker(omaewa: String) extends Actor with akka.actor.ActorLogging{
 			//debug
 			println(s"----Worker: Name is ${name} -- ${self}")
 			peers.foreach(p => println(s"----Worker: Peers are: ${p._1}  ${p._2}"))
-			println(s"----Worker: Master is ${master}")
+			println(s"----Worker: Dimension Master is ${master}")
 	}
 }
