@@ -4,10 +4,10 @@
 	<info
 		organisation="com.typesafe.akka.samples"
 		module="akka-sample-cluster-scala_2.12"
-		revision="HEAD+20180118-1540"
+		revision="2c54ed5f+20180118-2325"
 		conf="sources"
 		confs="compile, runtime, test, provided, optional, multi-jvm, compile-internal, runtime-internal, test-internal, plugin, sources, docs, pom, scala-tool"
-		date="20180118154039"/>
+		date="20180118232534"/>
 	<dependencies>
 	</dependencies>
 </ivy-report>

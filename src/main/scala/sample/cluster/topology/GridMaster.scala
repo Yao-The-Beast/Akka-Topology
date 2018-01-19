@@ -21,6 +21,8 @@ class GridMaster(
   //grid and master info
   //Dimension Number, NodeMaster Idx, [workers Indices]
   var dimMastersInfo = ArrayBuffer[(Int, Int, ArrayBuffer[Int])]()
+
+  var totalReadyNodeMasters = 0;
   
   override def preStart(): Unit = cluster.subscribe(self, classOf[MemberUp])
 
@@ -40,9 +42,17 @@ class GridMaster(
         //Step 3
         //propagate the info to all the node masters who are going to be (a) dimensional master 
         initNodeMasters()
-        
-
       }
+
+    case msg : NodeMasterReady =>
+      totalReadyNodeMasters += 1
+      //if all the nodeMasters are ready (all the children actors are online), kickstart the master-slave pairing  
+      if (totalReadyNodeMasters == totalNodeMasters){
+        for ((idx, nodeMaster) <- nodeMasters){
+          nodeMaster ! StartNodeMaster()
+        }
+      }
+
 
     case Terminated(a) =>
       log.info(s"\n----$a is terminated, removing it from the set")

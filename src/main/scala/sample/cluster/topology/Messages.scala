@@ -5,6 +5,9 @@ import scala.collection.mutable.ArrayBuffer
 
 final case class SanityCheck(s : String)
 final case class GreetingFromGridMaster(id : Int)
+final case class NodeMasterReady(id : Int)
+final case class StartNodeMaster()
+
 final case class DimensionMasterAssignment(dim : Int, slaves : ArrayBuffer[ActorRef])
 final case class WorkerCreation(dim : Int)
 final case class DimensionMasterCreation(dim : Int, slaves : ArrayBuffer[ActorRef])
@@ -22,3 +25,4 @@ final case class RequestWorkerAddress(dim : Int)
 final case class RetrieveWorkerAddress(worker : ActorRef)
 
 final case class InitWorker(peers : Map[Int, ActorRef]) //it should contain other meta data
+

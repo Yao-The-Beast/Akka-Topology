@@ -19,6 +19,8 @@ class NodeMaster() extends Actor with akka.actor.ActorLogging{
   //dimension, workerRef
   var workersList = Map[Int, ActorRef]()
 
+  var gridMaster : Option[ActorRef] = None
+
   var id = -1
 
   var totalChildren = 3 //need to be fixed!!!!
@@ -30,6 +32,7 @@ class NodeMaster() extends Actor with akka.actor.ActorLogging{
     case msg : GreetingFromGridMaster => 
       println(s"----NodeMaster: Receive greeting from GridMaster. My id is ${msg.id}")
       id = msg.id
+      gridMaster = Some(sender)
 
 
     case msg : DimensionMasterAssignment =>
@@ -80,14 +83,14 @@ class NodeMaster() extends Actor with akka.actor.ActorLogging{
       context.watch(worker)
 
       workersList = workersList.updated(msg.dim, worker)
+      //workersList(msg.dim) ! SanityCheck("Hello from NodeMaster")
+      
       //Wait for the worker to echoBack
       workersList(msg.dim) ! Echo()
-      workersList(msg.dim) ! SanityCheck("Hello from NodeMaster")
+      
 
 
     case msg : RequestWorkerAddress =>
-      //debug use
-      println(s"----NodeMaster: Receive Worker Creation from DM ${sender} who is responsible for dim ${msg.dim}")
       sender ! RetrieveWorkerAddress(workersList(msg.dim))
 
 
@@ -95,10 +98,15 @@ class NodeMaster() extends Actor with akka.actor.ActorLogging{
       currentOnlineChildren += 1
       if (currentOnlineChildren == totalChildren){
         println(s"----NodeMaster: All ${totalChildren} children are online")
-        //Let all the dimension masters start finding their workers
-        for ((idx, dimensionMaster) <- dimensionMastersList){
-          dimensionMaster ! FindWorkers()
-        }
+        //let GridMaster know I am ready (all my children are online)
+        gridMaster.orNull ! NodeMasterReady(id)
+      }
+
+    case msg : StartNodeMaster =>
+      //Let all the dimension masters start finding their workers
+      println(s"----NodeMaster: DimensionMasters Begin to find workers")
+      for ((idx, dimensionMaster) <- dimensionMastersList){
+        dimensionMaster ! FindWorkers()
       }
 
 
